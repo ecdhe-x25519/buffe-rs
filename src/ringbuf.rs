@@ -35,6 +35,7 @@ pub type MpmcRingBuf<T, const N: usize> = RingBuf<T, N, Multi, Multi>;
 unsafe impl<T: Send, const N: usize, P: ProducerPolicy, C: ConsumerPolicy> Sync for RingBuf<T, N, P, C> {}
 
 impl<T, const N: usize, P: ProducerPolicy, C: ConsumerPolicy> RingBuf<T, N, P, C> {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             data: UnsafeCell::new(unsafe { MaybeUninit::uninit().assume_init() }),
@@ -47,34 +48,41 @@ impl<T, const N: usize, P: ProducerPolicy, C: ConsumerPolicy> RingBuf<T, N, P, C
         }
     }
 
+    #[inline(always)]
     pub fn len(&self) -> usize {
         let write = self.write_tail.load(Ordering::Acquire);
         let read = self.read_tail.load(Ordering::Acquire);
         write.wrapping_sub(read)
     }
 
+    #[inline(always)]
     pub fn is_full(&self) -> bool {
         self.len() >= N
     }
 
+    #[inline(always)]
     fn is_full_raw(head: usize, tail: usize) -> bool {
         head.wrapping_sub(tail) >= N
     }
 
+    #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
     
+    #[inline(always)]
     fn is_empty_raw(head: usize, tail: usize) -> bool {
         head == tail
     }
 
+    #[inline(always)]
     pub const fn capacity(&self) -> usize {
         N
     }
 }
 
 impl<T, const N: usize, C: ConsumerPolicy> RingBuf<T, N, Single, C> {
+    #[inline(always)]
     pub fn push(&self, item: T) -> Result<(), T> {
         let head = self.write_head.load(Ordering::Acquire);
         let tail = self.read_tail.load(Ordering::Acquire);
@@ -97,6 +105,7 @@ impl<T, const N: usize, C: ConsumerPolicy> RingBuf<T, N, Single, C> {
 }
 
 impl<T, const N: usize, C: ConsumerPolicy> RingBuf<T, N, Multi, C> {
+    #[inline(always)]
     pub fn push(&self, item: T) -> Result<(), T> {
         loop {
             let head = self.write_head.load(Ordering::Acquire);
@@ -130,6 +139,7 @@ impl<T, const N: usize, C: ConsumerPolicy> RingBuf<T, N, Multi, C> {
 }
 
 impl<T, const N: usize, P: ProducerPolicy> RingBuf<T, N, P, Single> {
+    #[inline(always)]
     pub fn pop(&self) -> Option<T> {
         let head = self.read_head.load(Ordering::Acquire);
         let tail = self.write_tail.load(Ordering::Acquire);
@@ -151,6 +161,7 @@ impl<T, const N: usize, P: ProducerPolicy> RingBuf<T, N, P, Single> {
 }
 
 impl<T, const N: usize, P: ProducerPolicy> RingBuf<T, N, P, Multi> {
+    #[inline(always)]
     pub fn pop(&self) -> Option<T> {
         loop {
             let head = self.read_head.load(Ordering::Acquire);
